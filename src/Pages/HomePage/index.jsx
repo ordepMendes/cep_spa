@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import axios from "axios";
 import InputMask from "react-input-mask";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
-import { Button, Header } from "./styles";
+import { Button, Header, Main } from "./styles";
 import { AiOutlineSearch } from "react-icons/ai";
+import { TbMapSearch } from "react-icons/tb";
+import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
 
 function HomePage() {
   const [cep, setCep] = useState();
@@ -13,6 +14,7 @@ function HomePage() {
     uf: "",
     localidade: "",
     bairro: "",
+    cep: "",
   });
   const apiKey = process.env.REACT_APP_API_KEY;
 
@@ -27,12 +29,18 @@ function HomePage() {
       .catch((err) => console.log("erro: " + err));
   };
 
+  const { isLoaded } = useJsApiLoader({
+    id: "google-map-script",
+    googleMapsApiKey: apiKey,
+  });
+
   const getLatAndLng = async (localidade, uf, logradouro, bairro) => {
     setInfoCep({
       localidade: localidade,
       uf: uf,
       logradouro: logradouro,
       bairro: bairro,
+      cep: cep,
     });
     await axios
       .get(
@@ -45,45 +53,52 @@ function HomePage() {
       .catch((err) => console.log(err));
   };
 
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: apiKey,
-  });
-
   return (
     <>
       <Header>
-        <p>Informe o CEP para buscarmos o endereço</p>
+        <p id="info-text">Informe o CEP para buscarmos o endereço</p>
         <form onSubmit={handleTest}>
           <InputMask
+            placeholder="Ex. xxxxx-xxx"
             mask={"99999-999"}
             onChange={(e) => setCep(e.target.value)}
             id="input-search"
           />
-          <Button type="submit">{<AiOutlineSearch />}</Button>
+          <Button type="submit">
+            {<AiOutlineSearch size={"30px"} color="#fff" />}
+          </Button>
         </form>
       </Header>
-      <main>
-        <p>Endereço encontrado: </p>
-        <p>CEP: {cep}</p>
-        <p>{infoCep.logradouro}</p>
-        <p>
-          {infoCep.bairro}, {infoCep.localidade} - {infoCep.uf}
-        </p>
-        {isLoaded ? (
+      <Main>
+        {!infoCep.cep ? (
           <section>
-            <GoogleMap
-              mapContainerStyle={{ width: "70%", height: "400px" }}
-              center={coordinate}
-              zoom={15}
-            >
-              <Marker position={coordinate} />
-            </GoogleMap>
+            <p>Nada foi digitado ainda</p>
+            <TbMapSearch size={250} color="#E4E3E3" />
           </section>
         ) : (
-          <></>
+          <>
+            <div>
+              <p id="address-ref">Endereço encontrado</p>
+              <p>CEP: {infoCep.cep}</p>
+              <p>{infoCep.logradouro}</p>
+              <p>
+                {infoCep.bairro}, {infoCep.localidade} - {infoCep.uf}
+              </p>
+            </div>
+            {isLoaded ? (
+              <GoogleMap
+                mapContainerStyle={{ width: "80%", height: "500px" }}
+                center={coordinate}
+                zoom={15}
+              >
+                <Marker position={coordinate} />
+              </GoogleMap>
+            ) : (
+              <></>
+            )}
+          </>
         )}
-      </main>
+      </Main>
     </>
   );
 }
