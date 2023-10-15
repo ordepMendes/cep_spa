@@ -1,10 +1,6 @@
 # SPA React CEP
 
-<p>O objetivo deste projeto é localizar o endereço associado a um CEP inserido e exibi-lo no Google Maps.</p>
-
-### Indice
-
--
+O objetivo deste projeto é localizar o endereço associado a um CEP inserido e exibi-lo no Google Maps.
 
 ### Tecnologias e bibliotecas
 
@@ -27,6 +23,17 @@ Para baixar as dependencias necessarias para a execução do projeto, abra o ter
 
 ```bash
 npm install
+ ```
+
+### Uso
+Para inicializar o projeto execute o seguinte comando no terminal
+
+```bash
+npm start
+
+# ou tambem
+
+yarn start
  ```
 
 Vejá como está o projeto: https://blend-spa-react.vercel.app/
