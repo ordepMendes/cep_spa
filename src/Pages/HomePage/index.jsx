@@ -1,104 +1,95 @@
 import React, { useState } from "react";
 import axios from "axios";
 import InputMask from "react-input-mask";
-import { Button, Header, Main } from "./styles";
+import { Header, Main } from "./styles";
 import { AiOutlineSearch } from "react-icons/ai";
 import { TbMapSearch } from "react-icons/tb";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import { GOOGLE_MAPS_URL, VIACEP_URL } from "../../constant";
+import Map from "../../components/Map";
 
 function HomePage() {
-  const [cep, setCep] = useState();
-  const [coordinate, setCoordinate] = useState(0);
-  const [infoCep, setInfoCep] = useState({
-    logradouro: "",
-    uf: "",
-    localidade: "",
-    bairro: "",
-    cep: "",
-  });
+  const [cep, setCep] = useState("");
+  const [coordinate, setCoordinate] = useState({ lat: 0, lng: 0 });
+  const [infoCep, setInfoCep] = useState({});
+  const [validation, setValidation] = useState("");
+
   const apiKey = process.env.REACT_APP_API_KEY;
 
-  const handleTest = async (e) => {
-    e.preventDefault();
-    await axios
-      .get(`https://viacep.com.br/ws/${cep}/json/`)
-      .then((res) => {
-        const { localidade, uf, logradouro, bairro } = res.data;
-        getLatAndLng(localidade, uf, logradouro, bairro);
-      })
-      .catch((err) => console.log("erro: " + err));
+  const fetchCEPData = async (cep) => {
+    const response = await axios.get(`${VIACEP_URL}/${cep}/json/`);
+    return response.data;
   };
 
-  const { isLoaded } = useJsApiLoader({
-    id: "google-map-script",
-    googleMapsApiKey: apiKey,
-  });
+  const fetchCoordinates = async (addressComponents) => {
+    const address = addressComponents.join(",");
+    const response = await axios.get(
+      `${GOOGLE_MAPS_URL}?address=${address}&key=${apiKey}`
+    );
+    return response.data.results[0].geometry.location;
+  };
 
-  const getLatAndLng = async (localidade, uf, logradouro, bairro) => {
-    setInfoCep({
-      localidade: localidade,
-      uf: uf,
-      logradouro: logradouro,
-      bairro: bairro,
-      cep: cep,
-    });
-    await axios
-      .get(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${localidade},${uf},${logradouro}&key=${apiKey}`
-      )
-      .then((res) => {
-        const location = res.data.results[0].geometry.location;
-        setCoordinate(location);
-      })
-      .catch((err) => console.log(err));
+  const handleCEPSearch = async (e) => {
+    e.preventDefault();
+    setValidation("");
+
+    try {
+      const { localidade, uf, logradouro, bairro } = await fetchCEPData(cep);
+
+      const location = await fetchCoordinates([
+        localidade,
+        uf,
+        logradouro,
+        bairro,
+      ]);
+      setCoordinate(location);
+
+      setInfoCep({ localidade, uf, logradouro, bairro, cep });
+    } catch (error) {
+      setValidation("Algo deu errado. Verifique o CEP e tente novamente.")
+    }
   };
 
   return (
     <>
       <Header>
-        <p id="info-text">Informe o CEP para buscarmos o endereço</p>
-        <form onSubmit={handleTest}>
+        <h1 id="title">Insira seu CEP para buscarmos o endereço</h1>
+        <form onSubmit={handleCEPSearch}>
           <InputMask
             placeholder="Ex. xxxxx-xxx"
             mask={"99999-999"}
             onChange={(e) => setCep(e.target.value)}
             id="input-search"
           />
-          <Button type="submit">
-            {<AiOutlineSearch size={"30px"} color="#fff" />}
-          </Button>
+          <button id="button-search" type="submit">
+            <AiOutlineSearch size={"30px"} color="#fff" />
+          </button>
         </form>
+        <sub>{validation}</sub>
       </Header>
       <Main>
         {!infoCep.cep ? (
-          <section>
+          <section id="container-info">
             <p>Nada foi digitado ainda</p>
             <TbMapSearch size={250} color="#E4E3E3" />
           </section>
         ) : (
-          <>
-            <div>
+          <section id="map-container">
+            <div id="info-cep-container">
               <p id="address-ref">Endereço encontrado</p>
-              <p>CEP: {infoCep.cep}</p>
-              <p>{infoCep.logradouro}</p>
-              <p>
-                {infoCep.bairro}, {infoCep.localidade} - {infoCep.uf}
-              </p>
+              <div id="sub-info">
+                <ul>
+                  <li className="item">CEP: {infoCep.cep}</li>
+                  <li className="item">{infoCep.logradouro}</li>
+                  <li className="item">{infoCep.bairro}, {infoCep.localidade} - {infoCep.uf}</li>
+                </ul>
+              </div>
             </div>
-            {isLoaded ? (
-              <GoogleMap
-                mapContainerStyle={{ width: "80%", height: "500px" }}
-                center={coordinate}
-                zoom={15}
-              >
-                <Marker position={coordinate} />
-              </GoogleMap>
-            ) : (
-              <></>
-            )}
-          </>
+            <Map coordinate={coordinate} />
+          </section>
         )}
+        <footer>© Pedro Mendes</footer>
       </Main>
+      
     </>
   );
 }
